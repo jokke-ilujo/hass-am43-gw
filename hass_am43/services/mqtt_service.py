@@ -32,6 +32,7 @@ class MQTTService(ClientService):
                       'device_class': "cover",
                       'object_id': bid,
                       'platform': "mqtt",
+                      'qos': 2,
                       '~': "homeassistant/cover/{}".format(bid),
                       'set_pos_t': "~/set_position",
                       'pos_t': "~/position",
@@ -66,7 +67,7 @@ class MQTTService(ClientService):
                                      CONF.am43_blinds)
         self.task.start(interval)
         try:
-            yield self.protocol.connect("TwistedMQTT-pubsubs",
+            yield self.protocol.connect("TwistedMQTT-hass-am43",
                                         keepalive=60,
                                         **self.credentials)
             yield self.subscribe()
@@ -97,7 +98,7 @@ class MQTTService(ClientService):
         d = []
         for b_conf in self.blinds_config:
             sub = self.protocol.subscribe(b_conf['~'] +
-                                          b_conf['set_pos_t'][1:], 0)
+                                          b_conf['set_pos_t'][1:], 2)
             sub.addCallbacks(_logGrantedQoS, self._logFailure)
             d.append(sub)
 
