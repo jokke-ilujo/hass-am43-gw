@@ -40,7 +40,7 @@ class MQTTService(ClientService):
                       'position_closed': 100}
             self.blinds_config.append(b_conf)
 
-    def _logFailure(failure):
+    def _log_failure(failure):
         log.debug("reported {message}", message=failure.getErrorMessage())
         return failure
 
@@ -99,7 +99,7 @@ class MQTTService(ClientService):
         for b_conf in self.blinds_config:
             sub = self.protocol.subscribe(b_conf['~'] +
                                           b_conf['set_pos_t'][1:], 2)
-            sub.addCallbacks(_logGrantedQoS, self._logFailure)
+            sub.addCallbacks(_logGrantedQoS, self._log_failure)
             d.append(sub)
 
         dlist = DeferredList(d, consumeErrors=True)
