@@ -29,11 +29,13 @@ class MQTTService(ClientService):
         self.blinds_config = []
         for bid, blind in self.blinds.items():
             b_conf = {'name': "AM43 Blind",
-                      'device_class': "cover",
+                      'device_class': "blind",
                       'object_id': bid,
+                      'unique_id': self.blinds[bid]['mac'].replace(':', ''),
                       'platform': "mqtt",
                       'qos': 2,
                       '~': "homeassistant/cover/{}".format(bid),
+                      'cmd_t': "~/set"
                       'set_pos_t': "~/set_position",
                       'pos_t': "~/position",
                       'position_open': 0,
@@ -54,18 +56,18 @@ class MQTTService(ClientService):
         ClientService.startService(self)
 
     @inlineCallbacks
-    def connect_to_broker(self, protocol,
-                          interval: float = 1200.0):
+    def connect_to_broker(self, protocol):
         '''
         Connect to MQTT broker
         '''
         self.protocol = protocol
         self.protocol.onPublish = self.on_publish
         self.protocol.onDisconnection = self.on_disconnection
-        self.protocol.setWindowSize(3)
+        self.protocol.setWindowSize(1)
+        self.interval = CONF.polling_interval
         self.task = task.LoopingCall(self.publish_positions,
                                      CONF.am43_blinds)
-        self.task.start(interval)
+        self.conf_task = task.LoopingCall(self.publish_config)
         try:
             yield self.protocol.connect("TwistedMQTT-hass-am43",
                                         keepalive=60,
@@ -77,14 +79,8 @@ class MQTTService(ClientService):
         else:
             log.info("Connected and subscribed to {broker}",
                      broker=self.broker)
-        try:
-            yield self.publish_config()
-            yield self.publish_positions(self.blinds.keys())
-        except Exception as e:
-            log.error("Publishing to {broker} raised {excp!s}",
-                      broker=self.broker, excp=e)
-        else:
-            log.info("Published cover configs.")
+        self.task.start(self.interval)
+        self.conf_task.start(self.interval)
 
     def subscribe(self):
 
@@ -99,6 +95,10 @@ class MQTTService(ClientService):
         for b_conf in self.blinds_config:
             sub = self.protocol.subscribe(b_conf['~'] +
                                           b_conf['set_pos_t'][1:], 2)
+            sub.addCallbacks(_logGrantedQoS, self._log_failure)
+            d.append(sub)
+            sub = self.protocol.subscribe(b_conf['~'] +
+                                          b_conf['cmd_t'][1:], 2)
             sub.addCallbacks(_logGrantedQoS, self._log_failure)
             d.append(sub)
 

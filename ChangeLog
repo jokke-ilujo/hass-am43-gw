@@ -1,4 +1,9 @@
 CHANGES
 =======
 
+* Set some debug logging
+* Fix \_log\_failure vs \_logFailure
+* Fix mqtt qos and client id
+* Initial structural commit
+* Initial structural commit
 * Initial commit
