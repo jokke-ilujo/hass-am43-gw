@@ -27,7 +27,7 @@ def main():
         fail(e)
     logging.startLogging()
     logging.setLogLevel(namespace='mqtt', levelStr='debug')
-    logging.setLogLevel(namespace='__main__', levelStr='debug')
+    logging.setLogLevel(levelStr='debug')
 
     factory = MQTTFactory(profile=MQTTFactory.SUBSCRIBER |
                           MQTTFactory.PUBLISHER)

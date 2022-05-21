@@ -126,6 +126,9 @@ class MQTTService(ClientService):
         log.debug(" >< Collecting blinds states >< ")
         blinds_states = {}
         for key in keys:
+            log.debug((" >< Publish positions >< key:{key} "
+                       "mac:{mac}").format(key=key,
+                                           mac=self.blinds[key]['mac']))
             blind_engine = am43.search(self.blinds[key]['mac'])
             blinds_states[key] = blind_engine.get_properties()
         else:
