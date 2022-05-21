@@ -1,0 +1,5 @@
+twisted
+twisted-mqtt
+oslo_config>=3.2
+pbr>=2.0.0
+-e git+https://github.com/jokke-ilujo/python-am43@master#egg=am43
