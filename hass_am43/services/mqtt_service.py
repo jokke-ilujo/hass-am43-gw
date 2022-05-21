@@ -2,7 +2,7 @@ import am43
 import json
 from oslo_config import cfg
 from twisted.application.internet import ClientService, backoffPolicy
-from twisted.internet import reactor, task
+from twisted.internet import task
 from twisted.internet.defer import inlineCallbacks, DeferredList
 
 from hass_am43 import logging
@@ -35,11 +35,14 @@ class MQTTService(ClientService):
                       'platform': "mqtt",
                       'qos': 2,
                       '~': "homeassistant/cover/{}".format(bid),
-                      'cmd_t': "~/set"
+                      'cmd_t': "~/set",
                       'set_pos_t': "~/set_position",
                       'pos_t': "~/position",
                       'position_open': 0,
-                      'position_closed': 100}
+                      'position_closed': 100,
+                      'payload_open': "OPEN",
+                      'payload_close': "CLOSE",
+                      'payload_stop': ''}
             self.blinds_config.append(b_conf)
 
     def _log_failure(failure):
@@ -54,6 +57,8 @@ class MQTTService(ClientService):
         # whenConnected() inherited from ClientService
         self.whenConnected().addCallback(self.connect_to_broker)
         ClientService.startService(self)
+        self.task.start(self.interval)
+        self.conf_task.start(self.interval)
 
     @inlineCallbacks
     def connect_to_broker(self, protocol):
@@ -79,8 +84,6 @@ class MQTTService(ClientService):
         else:
             log.info("Connected and subscribed to {broker}",
                      broker=self.broker)
-        self.task.start(self.interval)
-        self.conf_task.start(self.interval)
 
     def subscribe(self):
 
@@ -159,14 +162,16 @@ class MQTTService(ClientService):
                       item['~'] + item['set_pos_t'][1:] == topic), False)
         if blind:
             blind_engine = am43.search(self.blinds[blind['object_id']]['mac'])
-            blind_engine.set_postion(pecentage=payload)
-            d = task.deferLater(reactor,
-                                30,
-                                self.publish_positions,
-                                [blind['object_id']])
-            d.addErrback(self._log_failure)
-            d.addCallback(self._log_all_pub)
-            return d
+        else:
+            blind = next((item for item in self.blinds_config if
+                          item['~'] + item['cmd_t'][1:] == topic), False)
+            if blind:
+                blind_engine = am43.search(
+                        self.blinds[blind['object_id']]['mac'])
+                if payload == "OPEN":
+                    blind_engine.set_postion(pecentage=0)
+                else:
+                    blind_engine.set_postion(pecentage=100)
 
     def on_disconnection(self, reason):
         '''

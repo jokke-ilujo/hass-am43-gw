@@ -1,6 +1,7 @@
 CHANGES
 =======
 
+* Fix config and update calls
 * Set some debug logging
 * Fix \_log\_failure vs \_logFailure
 * Fix mqtt qos and client id
